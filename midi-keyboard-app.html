@@ -467,6 +467,10 @@
             background: #764ba2;
         }
 
+        .fret-note.alternative {
+            background: #FFA500;
+        }
+
         .string-label {
             width: 30px;
             text-align: center;
@@ -735,6 +739,7 @@
             <button id="toggleStaffBtn" class="toggle-instrument-btn">Hide Staff</button>
             <button id="togglePianoBtn" class="toggle-instrument-btn">Hide Piano</button>
             <button id="toggleGuitarBtn" class="toggle-instrument-btn">Hide Guitar</button>
+            <button id="toggleGuitarModeBtn" class="toggle-instrument-btn">First Position</button>
             <button id="soundToggleBtn" class="sound-toggle-btn">
                 <span id="soundIcon">🔊</span>
                 <span>Sound On</span>
@@ -850,6 +855,10 @@
         const toggleGuitarBtn = document.getElementById('toggleGuitarBtn');
         const toggleStaffBtn = document.getElementById('toggleStaffBtn');
         const staffContainerEl = document.querySelector('.staff-container');
+        const toggleGuitarModeBtn = document.getElementById('toggleGuitarModeBtn');
+
+        // Load guitar display mode from localStorage (default: 'first')
+        let guitarDisplayMode = localStorage.getItem('guitarDisplayMode') || 'first';
 
         // Web Audio API setup
         let audioContext = null;
@@ -1453,7 +1462,7 @@
             // Reset all notes
             const allNotes = guitarFretboardEl.querySelectorAll('.fret-note');
             allNotes.forEach(note => {
-                note.classList.remove('active', 'root');
+                note.classList.remove('active', 'root', 'alternative');
             });
 
             if (activeNotes.size === 0) return;
@@ -1464,12 +1473,60 @@
             // Highlight active notes on fretboard
             activeNotes.forEach(midiNote => {
                 const noteMarkers = guitarFretboardEl.querySelectorAll(`[data-midi-note="${midiNote}"]`);
-                noteMarkers.forEach(marker => {
-                    marker.classList.add('active');
-                    if (midiNote === rootNote) {
-                        marker.classList.add('root');
+
+                if (guitarDisplayMode === 'first') {
+                    // Show only the first occurrence (lowest fret number)
+                    let firstMarker = null;
+                    let lowestFret = Infinity;
+
+                    noteMarkers.forEach(marker => {
+                        const fretDiv = marker.parentElement;
+                        const fret = parseInt(fretDiv.dataset.fret);
+                        if (fret < lowestFret) {
+                            lowestFret = fret;
+                            firstMarker = marker;
+                        }
+                    });
+
+                    if (firstMarker) {
+                        firstMarker.classList.add('active');
+                        if (midiNote === rootNote) {
+                            firstMarker.classList.add('root');
+                        }
                     }
-                });
+                } else {
+                    // Show all positions with different colors
+                    let firstMarker = null;
+                    let lowestFret = Infinity;
+
+                    // Find the first position
+                    noteMarkers.forEach(marker => {
+                        const fretDiv = marker.parentElement;
+                        const fret = parseInt(fretDiv.dataset.fret);
+                        if (fret < lowestFret) {
+                            lowestFret = fret;
+                            firstMarker = marker;
+                        }
+                    });
+
+                    // Mark all positions
+                    noteMarkers.forEach(marker => {
+                        marker.classList.add('active');
+
+                        // First position gets root color if it's the root note
+                        if (marker === firstMarker && midiNote === rootNote) {
+                            marker.classList.add('root');
+                        }
+                        // First position but not root gets standard color (blue)
+                        else if (marker === firstMarker) {
+                            // Standard blue color, no additional class needed
+                        }
+                        // Alternative positions get orange color
+                        else {
+                            marker.classList.add('alternative');
+                        }
+                    });
+                }
             });
         }
 
@@ -1754,6 +1811,20 @@
             }
         }
 
+        function toggleGuitarMode() {
+            if (guitarDisplayMode === 'first') {
+                guitarDisplayMode = 'all';
+                toggleGuitarModeBtn.textContent = 'All Positions';
+                localStorage.setItem('guitarDisplayMode', 'all');
+            } else {
+                guitarDisplayMode = 'first';
+                toggleGuitarModeBtn.textContent = 'First Position';
+                localStorage.setItem('guitarDisplayMode', 'first');
+            }
+            // Refresh the guitar visualization
+            updateGuitarVisualization();
+        }
+
         function onMIDISuccess(access) {
             midiAccess = access;
             const inputs = midiAccess.inputs;
@@ -1856,6 +1927,13 @@
                 guitarFretboardEl.style.display = 'none';
                 toggleGuitarBtn.textContent = 'Show Guitar';
             }
+
+            // Restore guitar display mode
+            if (guitarDisplayMode === 'all') {
+                toggleGuitarModeBtn.textContent = 'All Positions';
+            } else {
+                toggleGuitarModeBtn.textContent = 'First Position';
+            }
         }
 
         // Initialize button state on page load
@@ -1873,6 +1951,7 @@
         toggleStaffBtn.addEventListener('click', toggleStaff);
         togglePianoBtn.addEventListener('click', togglePiano);
         toggleGuitarBtn.addEventListener('click', toggleGuitar);
+        toggleGuitarModeBtn.addEventListener('click', toggleGuitarMode);
 
         // Initialize piano keyboard and guitar fretboard visualization on page load
         createPianoKeyboard();
