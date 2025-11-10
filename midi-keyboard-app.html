@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Keyboard Input</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .status.disconnected {
+            background: #fee;
+            color: #c33;
+        }
+
+        .status.connected {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .current-note {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .note-display {
+            font-size: 72px;
+            font-weight: bold;
+            color: #667eea;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .chord-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #764ba2;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0ff;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .staff-container {
+            margin: 30px 0;
+            padding: 20px 30px 40px 30px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .staff-container h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        .staff-wrapper {
+            position: relative;
+            width: 100%;
+            height: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0 80px 0;
+        }
+
+        .staff {
+            position: relative;
+            width: 500px;
+            height: 300px;
+            margin: 0 auto;
+        }
+
+        .treble-staff {
+            position: absolute;
+            width: 100%;
+            height: 120px;
+            top: 0;
+        }
+
+        .bass-staff {
+            position: absolute;
+            width: 100%;
+            height: 120px;
+            bottom: 0;
+        }
+
+        .staff-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #333;
+            left: 0;
+        }
+
+        /* Treble staff lines */
+        .treble-staff .staff-line:nth-child(1) { top: 0%; }
+        .treble-staff .staff-line:nth-child(2) { top: 25%; }
+        .treble-staff .staff-line:nth-child(3) { top: 50%; }
+        .treble-staff .staff-line:nth-child(4) { top: 75%; }
+        .treble-staff .staff-line:nth-child(5) { top: 100%; }
+
+        /* Bass staff lines */
+        .bass-staff .staff-line:nth-child(1) { top: 0%; }
+        .bass-staff .staff-line:nth-child(2) { top: 25%; }
+        .bass-staff .staff-line:nth-child(3) { top: 50%; }
+        .bass-staff .staff-line:nth-child(4) { top: 75%; }
+        .bass-staff .staff-line:nth-child(5) { top: 100%; }
+
+        .treble-clef {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 90px;
+            font-weight: bold;
+            color: #333;
+            font-family: serif;
+        }
+
+        .bass-clef {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 70px;
+            font-weight: bold;
+            color: #333;
+            font-family: serif;
+        }
+
+        .brace {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 280px;
+            color: #333;
+            line-height: 1;
+        }
+
+        .note-group {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+
+        .note-head {
+            position: absolute;
+            width: 28px;
+            height: 20px;
+            background: #333;
+            border-radius: 50%;
+            transform: translateX(-50%) rotate(-20deg);
+            left: 50%;
+        }
+
+        .note-stem {
+            position: absolute;
+            width: 2px;
+            height: 60px;
+            background: #333;
+            left: 50%;
+        }
+
+        .note-stem.up {
+            bottom: 8px;
+            margin-left: 13px;
+        }
+
+        .note-stem.down {
+            top: 8px;
+            margin-left: -13px;
+        }
+
+        .ledger-line {
+            position: absolute;
+            width: 40px;
+            height: 2px;
+            background: #333;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .note-label {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            white-space: nowrap;
+        }
+
+        .note-label.above {
+            top: -35px;
+        }
+
+        .note-label.below {
+            bottom: -35px;
+        }
+
+        .sharp-symbol, .flat-symbol {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .piano-keyboard {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow-x: auto;
+        }
+
+        .octave {
+            display: flex;
+            position: relative;
+            margin: 0 2px;
+        }
+
+        .key {
+            position: relative;
+            border: 1px solid #000;
+            box-sizing: border-box;
+        }
+
+        .white-key {
+            width: 40px;
+            height: 150px;
+            background: white;
+            border-radius: 0 0 5px 5px;
+            z-index: 1;
+            transition: all 0.1s;
+        }
+
+        .white-key.active {
+            background: linear-gradient(180deg, #667eea 0%, #5568d3 100%);
+            transform: translateY(2px);
+        }
+
+        .black-key {
+            width: 28px;
+            height: 95px;
+            background: #333;
+            position: absolute;
+            z-index: 2;
+            border-radius: 0 0 3px 3px;
+            transition: all 0.1s;
+        }
+
+        .black-key.active {
+            background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .black-key.c-sharp { left: 28px; }
+        .black-key.d-sharp { left: 68px; }
+        .black-key.f-sharp { left: 148px; }
+        .black-key.g-sharp { left: 188px; }
+        .black-key.a-sharp { left: 228px; }
+
+        .key-label {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #666;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .white-key.active .key-label {
+            color: white;
+            opacity: 1;
+        }
+
+        .black-key.active .key-label {
+            color: white;
+            opacity: 1;
+        }
+
+        .keyboard-container {
+            overflow-x: auto;
+        }
+
+        .midi-devices {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .midi-devices h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .device-item.connected {
+            border-left-color: #3c3;
+        }
+
+        .device-item.disconnected {
+            border-left-color: #ccc;
+            opacity: 0.6;
+        }
+
+        .device-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.connected {
+            background: #efe;
+            color: #3c3;
+        }
+
+        .status-badge.disconnected {
+            background: #fee;
+            color: #c33;
+        }
+
+        .device-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .device-button:hover {
+            background: #5568d3;
+        }
+
+        .device-button.disconnect {
+            background: #c33;
+        }
+
+        .device-button.disconnect:hover {
+            background: #a22;
+        }
+
+        .sound-toggle-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sound-toggle-btn:hover {
+            background: #5568d3;
+        }
+
+        .sound-toggle-btn.muted {
+            background: #999;
+        }
+
+        .sound-toggle-btn.muted:hover {
+            background: #888;
+        }
+
+        .note-history {
+            margin-top: 20px;
+        }
+
+        .note-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .note-history h2 {
+            color: #555;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .toggle-history-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-history-btn:hover {
+            background: #5568d3;
+        }
+
+        .history-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .note-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .note-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .note-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .midi-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .button-group button {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MIDI Keyboard Input</h1>
+
+        <div id="status" class="status disconnected">
+            No MIDI device connected
+        </div>
+
+        <div class="button-group">
+            <button id="connectBtn">Connect MIDI Device</button>
+            <button id="toggleDevicesBtn" style="display: none;">Manage Devices</button>
+            <button id="soundToggleBtn" class="sound-toggle-btn">
+                <span id="soundIcon">🔊</span>
+                <span>Sound On</span>
+            </button>
+        </div>
+
+        <div class="midi-devices" id="midiDevicesSection" style="display: none;">
+            <h2>MIDI Input Devices</h2>
+            <div id="deviceList" class="device-list"></div>
+        </div>
+
+        <div class="staff-container">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <div id="staffLabel" style="font-size: 28px; font-weight: bold; color: #667eea; min-height: 32px;">
+                    Press a key...
+                </div>
+            </div>
+            <div class="staff-wrapper">
+                <div id="musicalStaff" class="staff">
+                    <div class="brace">{</div>
+                    <div class="treble-staff">
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="treble-clef">𝄞</div>
+                    </div>
+                    <div class="bass-staff">
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="staff-line"></div>
+                        <div class="bass-clef">𝄢</div>
+                    </div>
+                    <div id="noteGroup" class="note-group"></div>
+                </div>
+            </div>
+            <!-- Hidden element for compatibility with displayNote function -->
+            <div id="noteDisplay" style="display: none;"></div>
+        </div>
+
+        <div class="current-note">
+            <h2>Chord Detection</h2>
+            <div id="chordDisplay" class="chord-display">
+                No chord detected
+            </div>
+
+            <div class="keyboard-container">
+                <div id="pianoKeyboard" class="piano-keyboard"></div>
+            </div>
+        </div>
+
+        <div class="note-history">
+            <div class="note-history-header">
+                <h2>Note History</h2>
+                <button id="toggleHistoryBtn" class="toggle-history-btn">Show History</button>
+            </div>
+            <div id="historyList" class="history-list" style="display: none;">
+                <p style="text-align: center; color: #999;">No notes played yet</p>
+            </div>
+        </div>
+
+        <div class="midi-info">
+            <strong>How to use:</strong> Click "Connect MIDI Device", select your MIDI keyboard from the list, and start playing!
+            Your browser must support Web MIDI API (Chrome, Edge, Opera).
+        </div>
+    </div>
+
+    <script>
+        // MIDI note number to note name mapping
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function midiNoteToName(midiNote) {
+            const octave = Math.floor(midiNote / 12) - 1;
+            const noteName = noteNames[midiNote % 12];
+            return `${noteName}${octave}`;
+        }
+
+        let midiAccess = null;
+        let noteHistory = [];
+        let activeNotes = new Set(); // Track currently pressed notes
+        let connectedInputs = new Map(); // Track which inputs are actively connected
+
+        const statusEl = document.getElementById('status');
+        const noteDisplayEl = document.getElementById('noteDisplay');
+        const chordDisplayEl = document.getElementById('chordDisplay');
+        const pianoKeyboardEl = document.getElementById('pianoKeyboard');
+        const historyListEl = document.getElementById('historyList');
+        const connectBtn = document.getElementById('connectBtn');
+        const toggleDevicesBtn = document.getElementById('toggleDevicesBtn');
+        const toggleHistoryBtn = document.getElementById('toggleHistoryBtn');
+        const midiDevicesSectionEl = document.getElementById('midiDevicesSection');
+        const deviceListEl = document.getElementById('deviceList');
+        const noteGroupEl = document.getElementById('noteGroup');
+        const staffLabelEl = document.getElementById('staffLabel');
+
+        // Web Audio API setup
+        let audioContext = null;
+        let activeOscillators = new Map(); // Track playing notes
+
+        // Load mute preference from localStorage
+        let isMuted = localStorage.getItem('midiSoundMuted') === 'true';
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function midiNoteToFrequency(midiNote) {
+            // Convert MIDI note number to frequency in Hz
+            // A4 (MIDI note 69) = 440 Hz
+            return 440 * Math.pow(2, (midiNote - 69) / 12);
+        }
+
+        function playNote(midiNote, velocity) {
+            // Exit early if sound is muted
+            if (isMuted) return;
+
+            initAudio();
+
+            // If note is already playing, stop it first before starting a new one
+            if (activeOscillators.has(midiNote)) {
+                stopNote(midiNote);
+            }
+
+            const frequency = midiNoteToFrequency(midiNote);
+            const velocityGain = velocity / 127; // Normalize velocity to 0-1
+
+            // Create oscillators for a richer piano-like sound
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const oscillator3 = audioContext.createOscillator();
+
+            // Main tone
+            oscillator1.type = 'triangle';
+            oscillator1.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            // Harmonic
+            oscillator2.type = 'sine';
+            oscillator2.frequency.setValueAtTime(frequency * 2, audioContext.currentTime);
+
+            // Sub-harmonic for body
+            oscillator3.type = 'sine';
+            oscillator3.frequency.setValueAtTime(frequency * 0.5, audioContext.currentTime);
+
+            // Create gain nodes
+            const mainGain = audioContext.createGain();
+            const harmonicGain = audioContext.createGain();
+            const subGain = audioContext.createGain();
+            const masterGain = audioContext.createGain();
+
+            // Set gain levels for piano-like timbre
+            mainGain.gain.setValueAtTime(0.4 * velocityGain, audioContext.currentTime);
+            harmonicGain.gain.setValueAtTime(0.15 * velocityGain, audioContext.currentTime);
+            subGain.gain.setValueAtTime(0.2 * velocityGain, audioContext.currentTime);
+            masterGain.gain.setValueAtTime(0.3, audioContext.currentTime);
+
+            // Attack envelope
+            const attackTime = 0.01;
+            masterGain.gain.setValueAtTime(0, audioContext.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.3 * velocityGain, audioContext.currentTime + attackTime);
+
+            // Connect nodes
+            oscillator1.connect(mainGain);
+            oscillator2.connect(harmonicGain);
+            oscillator3.connect(subGain);
+
+            mainGain.connect(masterGain);
+            harmonicGain.connect(masterGain);
+            subGain.connect(masterGain);
+
+            masterGain.connect(audioContext.destination);
+
+            // Start oscillators
+            oscillator1.start(audioContext.currentTime);
+            oscillator2.start(audioContext.currentTime);
+            oscillator3.start(audioContext.currentTime);
+
+            // Store oscillators and gain for later stopping
+            activeOscillators.set(midiNote, {
+                oscillators: [oscillator1, oscillator2, oscillator3],
+                masterGain: masterGain
+            });
+        }
+
+        function stopNote(midiNote) {
+            if (!activeOscillators.has(midiNote)) {
+                return;
+            }
+
+            const noteData = activeOscillators.get(midiNote);
+
+            // Remove from active oscillators immediately to prevent duplicate stops
+            activeOscillators.delete(midiNote);
+
+            const releaseTime = 0.3; // Release time in seconds
+            const now = audioContext.currentTime;
+
+            try {
+                // Apply release envelope using linear ramp (more reliable than exponential)
+                const currentGain = noteData.masterGain.gain.value;
+                noteData.masterGain.gain.cancelScheduledValues(now);
+                noteData.masterGain.gain.setValueAtTime(currentGain, now);
+                noteData.masterGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+
+                // Stop oscillators after release
+                noteData.oscillators.forEach(osc => {
+                    try {
+                        osc.stop(now + releaseTime);
+                    } catch (e) {
+                        // Oscillator might already be stopped, ignore error
+                        console.warn('Error stopping oscillator:', e);
+                    }
+                });
+            } catch (e) {
+                // If there's any error, force stop all oscillators immediately
+                console.warn('Error in stopNote, forcing immediate stop:', e);
+                noteData.oscillators.forEach(osc => {
+                    try {
+                        osc.stop();
+                    } catch (e2) {
+                        // Already stopped
+                    }
+                });
+            }
+        }
+
+        function stopAllNotes() {
+            // Emergency function to stop all playing notes
+            console.log('Stopping all notes...');
+            const notesToStop = Array.from(activeOscillators.keys());
+            notesToStop.forEach(note => stopNote(note));
+            activeNotes.clear();
+            updateChordDisplay();
+        }
+
+        // Chord recognition system
+        const chordPatterns = {
+            // Triads
+            'major': [0, 4, 7],
+            'minor': [0, 3, 7],
+            'diminished': [0, 3, 6],
+            'augmented': [0, 4, 8],
+            'sus2': [0, 2, 7],
+            'sus4': [0, 5, 7],
+
+            // Seventh chords
+            'major7': [0, 4, 7, 11],
+            'minor7': [0, 3, 7, 10],
+            'dominant7': [0, 4, 7, 10],
+            'diminished7': [0, 3, 6, 9],
+            'half-diminished7': [0, 3, 6, 10],
+            'minor-major7': [0, 3, 7, 11],
+            'augmented7': [0, 4, 8, 10],
+
+            // Extended chords
+            'major9': [0, 4, 7, 11, 14],
+            'minor9': [0, 3, 7, 10, 14],
+            'dominant9': [0, 4, 7, 10, 14],
+            'add9': [0, 4, 7, 14],
+            'minor-add9': [0, 3, 7, 14],
+
+            // Sixth chords
+            'major6': [0, 4, 7, 9],
+            'minor6': [0, 3, 7, 9]
+        };
+
+        function normalizeChord(notes) {
+            // Normalize to semitone intervals from the lowest note
+            const sorted = [...notes].sort((a, b) => a - b);
+            const root = sorted[0];
+            return sorted.map(note => (note - root) % 12).sort((a, b) => a - b);
+        }
+
+        function matchChord(intervals) {
+            for (const [chordName, pattern] of Object.entries(chordPatterns)) {
+                if (intervals.length === pattern.length) {
+                    if (intervals.every((interval, idx) => interval === pattern[idx])) {
+                        return chordName;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function recognizeChord(midiNotes) {
+            if (midiNotes.length < 2) return null;
+
+            const intervals = normalizeChord(midiNotes);
+            const match = matchChord(intervals);
+
+            if (match) {
+                const rootNote = Math.min(...midiNotes);
+                const rootName = noteNames[rootNote % 12];
+                return { root: rootName, type: match };
+            }
+
+            return null;
+        }
+
+        // Staff notation rendering
+        // Grand staff with treble (top) and bass (bottom)
+        // Treble: F5(0) at top, E4(8) at bottom
+        // Middle: C4 (position 10) between staves
+        // Bass: A3(10) at top, G2(18) at bottom
+
+        function getStaffPosition(noteName) {
+            // Extract note and octave
+            const match = noteName.match(/([A-G]#?)(\d+)/);
+            if (!match) return { position: 10, staff: 'treble' }; // Default to middle C
+
+            const note = match[1];
+            const octave = parseInt(match[2]);
+
+            // Map each note to its position relative to C
+            const noteOrder = {
+                'C': 0, 'C#': 0,
+                'D': 1, 'D#': 1,
+                'E': 2,
+                'F': 3, 'F#': 3,
+                'G': 4, 'G#': 4,
+                'A': 5, 'A#': 5,
+                'B': 6
+            };
+
+            // Calculate position from F5 (treble top line = 0)
+            const f5Offset = 5 * 7 + 3;
+            const currentOffset = octave * 7 + noteOrder[note];
+            const position = f5Offset - currentOffset;
+
+            // Determine which staff to use
+            // Position 0-8: treble staff
+            // Position 10+: bass staff (shift positions for bass display)
+            let staff = 'treble';
+            let adjustedPosition = position;
+
+            if (position >= 10) {
+                staff = 'bass';
+                // Bass staff: position 10 = top ledger, 12 = A3 (top line), 20 = G2 (bottom line)
+                adjustedPosition = position - 10; // Shift to bass staff coordinates
+            }
+
+            return { position: adjustedPosition, staff: staff };
+        }
+
+        function needsLedgerLine(position) {
+            // Ledger lines needed for positions outside main staff
+            // Staff lines are at positions: 0 (F5), 2 (D5), 4 (B4), 6 (G4), 8 (E4)
+            const ledgerLines = [];
+
+            if (position < 0) {
+                // Above staff - ledger lines at even positions
+                for (let i = -2; i >= position; i -= 2) {
+                    ledgerLines.push(i);
+                }
+            } else if (position > 8) {
+                // Below staff - ledger lines at even positions
+                for (let i = 10; i <= position; i += 2) {
+                    ledgerLines.push(i);
+                }
+            }
+            return ledgerLines;
+        }
+
+        function renderStaffNotation(midiNotes) {
+            noteGroupEl.innerHTML = '';
+
+            if (midiNotes.length === 0) {
+                staffLabelEl.textContent = 'Press a key...';
+                return;
+            }
+
+            // Sort notes from lowest to highest
+            const sortedNotes = [...midiNotes].sort((a, b) => a - b);
+            const noteElements = [];
+
+            // Determine if it's a chord
+            const chord = recognizeChord(sortedNotes);
+
+            if (chord && sortedNotes.length >= 2) {
+                // Display chord name
+                const chordSymbol = formatChordName(chord.type);
+                staffLabelEl.textContent = `${chord.root}${chordSymbol}`;
+            } else if (sortedNotes.length === 1) {
+                // Display single note name
+                staffLabelEl.textContent = midiNoteToName(sortedNotes[0]);
+            } else {
+                // Multiple notes but not a recognized chord
+                staffLabelEl.textContent = `${sortedNotes.length} notes`;
+            }
+
+            // Calculate positions for all notes
+            const notePositions = sortedNotes.map(note => {
+                const noteName = midiNoteToName(note);
+                const staffInfo = getStaffPosition(noteName);
+                const isSharp = noteName.includes('#');
+                return { note, noteName, position: staffInfo.position, staff: staffInfo.staff, isSharp };
+            });
+
+            // Find the average position to determine stem direction
+            // Middle of staff is around position 4 (B4 line)
+            const avgPosition = notePositions.reduce((sum, n) => sum + n.position, 0) / notePositions.length;
+            const stemDirection = avgPosition < 4 ? 'down' : 'up';
+
+            // Render each note
+            notePositions.forEach((noteData, index) => {
+                const { note, noteName, position, staff, isSharp } = noteData;
+
+                // Calculate vertical position within the grand staff
+                // Treble staff is at top 40% (0-120px of 300px)
+                // Bass staff is at bottom 40% (180-300px of 300px)
+                let topPercent;
+                if (staff === 'treble') {
+                    // Position within treble staff: 0% at top of treble, 40% at bottom
+                    topPercent = (position * 12.5) * 0.4; // Scale to 40% of total height
+                } else {
+                    // Position within bass staff: 60% at top of bass, 100% at bottom
+                    topPercent = 60 + (position * 12.5) * 0.4; // Offset by 60%, scale to 40%
+                }
+
+                // Create note head
+                const noteHead = document.createElement('div');
+                noteHead.className = 'note-head';
+                noteHead.style.top = `calc(${topPercent}% - 10px)`;
+
+                // Offset notes horizontally if they're adjacent (for chords)
+                let horizontalOffset = 0;
+                if (notePositions.length > 1 && index > 0) {
+                    const prevPosition = notePositions[index - 1].position;
+                    if (Math.abs(position - prevPosition) <= 1) {
+                        horizontalOffset = 20; // Offset to the right
+                    }
+                }
+                if (horizontalOffset > 0) {
+                    noteHead.style.left = `calc(50% + ${horizontalOffset}px)`;
+                }
+
+                noteGroupEl.appendChild(noteHead);
+
+                // Add sharp/flat symbol if needed
+                if (isSharp) {
+                    const sharpSymbol = document.createElement('div');
+                    sharpSymbol.className = 'sharp-symbol';
+                    sharpSymbol.textContent = '♯';
+                    sharpSymbol.style.top = `calc(${topPercent}% - 12px)`;
+                    sharpSymbol.style.left = `calc(50% + ${horizontalOffset - 25}px)`;
+                    noteGroupEl.appendChild(sharpSymbol);
+                }
+
+                // Add ledger lines if needed (these should be centered on the line position)
+                const ledgerLines = needsLedgerLine(position);
+                ledgerLines.forEach(linePos => {
+                    const ledger = document.createElement('div');
+                    ledger.className = 'ledger-line';
+                    const ledgerTopPercent = linePos * 12.5;
+                    ledger.style.top = `calc(${ledgerTopPercent}% - 1px)`;
+                    if (horizontalOffset > 0) {
+                        ledger.style.left = `calc(50% + ${horizontalOffset}px)`;
+                    }
+                    noteGroupEl.appendChild(ledger);
+                });
+            });
+
+            // Add a single stem for all notes (if any notes present)
+            if (notePositions.length > 0) {
+                const stem = document.createElement('div');
+                stem.className = `note-stem ${stemDirection}`;
+
+                if (stemDirection === 'up') {
+                    // Stem goes up from the highest note (lowest position number)
+                    const highestPosition = Math.min(...notePositions.map(n => n.position));
+                    const topPercent = highestPosition * 12.5;
+                    stem.style.bottom = `calc(${100 - topPercent}% - 8px)`;
+                } else {
+                    // Stem goes down from the lowest note (highest position number)
+                    const lowestPosition = Math.max(...notePositions.map(n => n.position));
+                    const topPercent = lowestPosition * 12.5;
+                    stem.style.top = `calc(${topPercent}% + 8px)`;
+                }
+
+                noteGroupEl.appendChild(stem);
+            }
+        }
+
+        function updateChordDisplay() {
+            const notes = Array.from(activeNotes);
+
+            if (notes.length === 0) {
+                chordDisplayEl.textContent = 'No chord detected';
+                updatePianoVisualization();
+                renderStaffNotation([]);
+                return;
+            }
+
+            // Recognize chord
+            const chord = recognizeChord(notes);
+
+            if (chord) {
+                const chordSymbol = formatChordName(chord.type);
+                chordDisplayEl.textContent = `${chord.root}${chordSymbol}`;
+            } else if (notes.length >= 2) {
+                chordDisplayEl.textContent = `${notes.length} notes (unrecognized)`;
+            } else {
+                // Single note - display the note name
+                const noteName = midiNoteToName(notes[0]);
+                chordDisplayEl.textContent = noteName;
+            }
+
+            // Update piano visualization and staff notation
+            updatePianoVisualization();
+            renderStaffNotation(notes);
+        }
+
+        function formatChordName(chordType) {
+            const nameMap = {
+                'major': '',
+                'minor': 'm',
+                'diminished': 'dim',
+                'augmented': 'aug',
+                'sus2': 'sus2',
+                'sus4': 'sus4',
+                'major7': 'maj7',
+                'minor7': 'm7',
+                'dominant7': '7',
+                'diminished7': 'dim7',
+                'half-diminished7': 'm7♭5',
+                'minor-major7': 'mMaj7',
+                'augmented7': 'aug7',
+                'major9': 'maj9',
+                'minor9': 'm9',
+                'dominant9': '9',
+                'add9': 'add9',
+                'minor-add9': 'madd9',
+                'major6': '6',
+                'minor6': 'm6'
+            };
+            return nameMap[chordType] || chordType;
+        }
+
+        // Piano keyboard visualization
+        function createPianoKeyboard() {
+            // Create 3 octaves (C2 to B4) - MIDI notes 36 to 71
+            const startOctave = 2;
+            const octaveCount = 3;
+
+            pianoKeyboardEl.innerHTML = '';
+
+            for (let oct = 0; oct < octaveCount; oct++) {
+                const octaveNum = startOctave + oct;
+                const octaveDiv = document.createElement('div');
+                octaveDiv.className = 'octave';
+
+                // White keys
+                const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+                whiteKeys.forEach((note, idx) => {
+                    const midiNote = (octaveNum + 1) * 12 + [0, 2, 4, 5, 7, 9, 11][idx];
+                    const key = document.createElement('div');
+                    key.className = 'key white-key';
+                    key.dataset.note = midiNote;
+
+                    const label = document.createElement('div');
+                    label.className = 'key-label';
+                    label.textContent = `${note}${octaveNum}`;
+                    key.appendChild(label);
+
+                    octaveDiv.appendChild(key);
+                });
+
+                // Black keys
+                const blackKeys = [
+                    { note: 'C#', class: 'c-sharp', offset: 1 },
+                    { note: 'D#', class: 'd-sharp', offset: 3 },
+                    { note: 'F#', class: 'f-sharp', offset: 6 },
+                    { note: 'G#', class: 'g-sharp', offset: 8 },
+                    { note: 'A#', class: 'a-sharp', offset: 10 }
+                ];
+
+                blackKeys.forEach(({ note, class: className, offset }) => {
+                    const midiNote = (octaveNum + 1) * 12 + offset;
+                    const key = document.createElement('div');
+                    key.className = `key black-key ${className}`;
+                    key.dataset.note = midiNote;
+
+                    const label = document.createElement('div');
+                    label.className = 'key-label';
+                    label.textContent = `${note}${octaveNum}`;
+                    key.appendChild(label);
+
+                    octaveDiv.appendChild(key);
+                });
+
+                pianoKeyboardEl.appendChild(octaveDiv);
+            }
+        }
+
+        function updatePianoVisualization() {
+            // Reset all keys
+            const allKeys = pianoKeyboardEl.querySelectorAll('.key');
+            allKeys.forEach(key => key.classList.remove('active'));
+
+            // Highlight active notes
+            activeNotes.forEach(midiNote => {
+                const key = pianoKeyboardEl.querySelector(`[data-note="${midiNote}"]`);
+                if (key) {
+                    key.classList.add('active');
+                }
+            });
+        }
+
+        function updateStatus(message, isConnected) {
+            statusEl.textContent = message;
+            statusEl.className = isConnected ? 'status connected' : 'status disconnected';
+        }
+
+        function displayNote(noteName, midiNote, velocity) {
+            noteDisplayEl.textContent = noteName;
+
+            // Add to history
+            const timestamp = new Date().toLocaleTimeString();
+            noteHistory.unshift({
+                name: noteName,
+                midiNote: midiNote,
+                velocity: velocity,
+                time: timestamp
+            });
+
+            // Keep only last 20 notes
+            if (noteHistory.length > 20) {
+                noteHistory.pop();
+            }
+
+            updateHistory();
+        }
+
+        function updateHistory() {
+            if (noteHistory.length === 0) {
+                historyListEl.innerHTML = '<p style="text-align: center; color: #999;">No notes played yet</p>';
+                return;
+            }
+
+            historyListEl.innerHTML = noteHistory.map(note => `
+                <div class="note-item">
+                    <span class="note-name">${note.name}</span>
+                    <span class="note-info">MIDI: ${note.midiNote} | Velocity: ${note.velocity} | ${note.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function onMIDIMessage(event) {
+            const [command, note, velocity] = event.data;
+            const deviceName = event.target.name || 'Unknown Device';
+
+            // Log all MIDI messages for debugging
+            console.log(`MIDI Message from ${deviceName}:`, {
+                command: command,
+                commandHex: '0x' + command.toString(16),
+                note: note,
+                velocity: velocity,
+                rawData: Array.from(event.data)
+            });
+
+            // MIDI note on/off commands can vary by channel (144-159 for note on, 128-143 for note off)
+            const commandType = command & 0xF0; // Get command without channel
+            const channel = command & 0x0F; // Get channel (0-15)
+
+            // 0x90 (144) = note on, 0x80 (128) = note off
+            if (commandType === 0x90 && velocity > 0) {
+                // Note on
+                const noteName = midiNoteToName(note);
+                console.log(`Note ON: ${noteName} (MIDI: ${note}, Velocity: ${velocity}) from ${deviceName} on channel ${channel}`);
+                displayNote(noteName, note, velocity);
+                activeNotes.add(note);
+                updateChordDisplay();
+                playNote(note, velocity);
+            } else if (commandType === 0x80 || (commandType === 0x90 && velocity === 0)) {
+                // Note off
+                const noteName = midiNoteToName(note);
+                console.log(`Note OFF: ${noteName} (MIDI: ${note}) from ${deviceName} on channel ${channel}`);
+                activeNotes.delete(note);
+                updateChordDisplay();
+                stopNote(note);
+            }
+        }
+
+        function connectInput(input) {
+            console.log(`Connecting to MIDI Input:`, {
+                id: input.id,
+                name: input.name,
+                manufacturer: input.manufacturer,
+                state: input.state,
+                connection: input.connection,
+                type: input.type
+            });
+
+            // Set the message handler for this specific input
+            input.onmidimessage = onMIDIMessage;
+            connectedInputs.set(input.id, input);
+            console.log(`Successfully connected to MIDI Input: ${input.name}`);
+            console.log(`Total connected inputs: ${connectedInputs.size}`);
+            updateDeviceList();
+            updateConnectionStatus();
+        }
+
+        function disconnectInput(inputId) {
+            const input = connectedInputs.get(inputId);
+            if (input) {
+                input.onmidimessage = null;
+                connectedInputs.delete(inputId);
+                console.log(`Disconnected from MIDI Input: ${input.name}`);
+                updateDeviceList();
+                updateConnectionStatus();
+            }
+        }
+
+        function updateConnectionStatus() {
+            const count = connectedInputs.size;
+            if (count > 0) {
+                updateStatus(`Connected to ${count} MIDI device(s)`, true);
+            } else {
+                updateStatus('No MIDI devices connected', false);
+            }
+        }
+
+        function updateDeviceList() {
+            if (!midiAccess) return;
+
+            const inputs = Array.from(midiAccess.inputs.values());
+
+            if (inputs.length === 0) {
+                deviceListEl.innerHTML = '<p style="text-align: center; color: #999;">No MIDI devices found</p>';
+                return;
+            }
+
+            deviceListEl.innerHTML = inputs.map(input => {
+                const isConnected = connectedInputs.has(input.id);
+                return `
+                    <div class="device-item ${isConnected ? 'connected' : 'disconnected'}">
+                        <div class="device-name">${input.name || 'Unknown Device'}</div>
+                        <div class="device-status">
+                            <span class="status-badge ${isConnected ? 'connected' : 'disconnected'}">
+                                ${isConnected ? 'Connected' : 'Disconnected'}
+                            </span>
+                            <button class="device-button ${isConnected ? 'disconnect' : ''}"
+                                    data-input-id="${input.id}"
+                                    onclick="handleDeviceButtonClick('${input.id}', ${isConnected})">
+                                ${isConnected ? 'Disconnect' : 'Connect'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleDeviceButtonClick(inputId, isConnected) {
+            if (isConnected) {
+                disconnectInput(inputId);
+            } else {
+                const input = midiAccess.inputs.get(inputId);
+                if (input) {
+                    connectInput(input);
+                }
+            }
+        }
+
+        function toggleDeviceList() {
+            if (midiDevicesSectionEl.style.display === 'none') {
+                midiDevicesSectionEl.style.display = 'block';
+                toggleDevicesBtn.textContent = 'Hide Devices';
+            } else {
+                midiDevicesSectionEl.style.display = 'none';
+                toggleDevicesBtn.textContent = 'Manage Devices';
+            }
+        }
+
+        function toggleHistory() {
+            if (historyListEl.style.display === 'none') {
+                historyListEl.style.display = 'block';
+                toggleHistoryBtn.textContent = 'Hide History';
+            } else {
+                historyListEl.style.display = 'none';
+                toggleHistoryBtn.textContent = 'Show History';
+            }
+        }
+
+        function onMIDISuccess(access) {
+            midiAccess = access;
+            const inputs = midiAccess.inputs;
+
+            // Show the toggle button
+            toggleDevicesBtn.style.display = 'block';
+            connectBtn.textContent = 'Refresh MIDI';
+
+            if (inputs.size === 0) {
+                updateStatus('No MIDI devices found', false);
+                updateDeviceList();
+                return;
+            }
+
+            // Auto-connect to all devices initially
+            inputs.forEach(input => {
+                connectInput(input);
+            });
+
+            updateDeviceList();
+
+            // Listen for device connection/disconnection
+            midiAccess.onstatechange = (e) => {
+                console.log(`MIDI Device ${e.port.state}: ${e.port.name}`);
+                updateDeviceList();
+
+                // Auto-connect new devices
+                if (e.port.state === 'connected' && e.port.type === 'input') {
+                    connectInput(e.port);
+                } else if (e.port.state === 'disconnected') {
+                    disconnectInput(e.port.id);
+                }
+            };
+        }
+
+        function onMIDIFailure(error) {
+            console.error('Failed to get MIDI access:', error);
+            updateStatus('Failed to access MIDI devices', false);
+            alert('Could not access MIDI devices. Make sure you have a MIDI keyboard connected and grant permission when prompted.');
+        }
+
+        function connectMIDI() {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess()
+                    .then(onMIDISuccess)
+                    .catch(onMIDIFailure);
+            } else {
+                alert('Web MIDI API is not supported in this browser. Please use Chrome, Edge, or Opera.');
+            }
+        }
+
+        // Sound toggle functionality
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+
+        function updateSoundToggleButton() {
+            const textSpan = soundToggleBtn.querySelector('span:last-child');
+
+            if (isMuted) {
+                soundToggleBtn.classList.add('muted');
+                soundIcon.textContent = '🔇';
+                textSpan.textContent = 'Sound Off';
+            } else {
+                soundToggleBtn.classList.remove('muted');
+                soundIcon.textContent = '🔊';
+                textSpan.textContent = 'Sound On';
+            }
+        }
+
+        soundToggleBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            localStorage.setItem('midiSoundMuted', isMuted);
+            updateSoundToggleButton();
+
+            // If muting, stop all currently playing notes
+            if (isMuted) {
+                stopAllNotes();
+            }
+        });
+
+        // Initialize button state on page load
+        updateSoundToggleButton();
+
+        // Make functions globally accessible for onclick handlers
+        window.connectInput = connectInput;
+        window.disconnectInput = disconnectInput;
+        window.handleDeviceButtonClick = handleDeviceButtonClick;
+
+        connectBtn.addEventListener('click', connectMIDI);
+        toggleDevicesBtn.addEventListener('click', toggleDeviceList);
+        toggleHistoryBtn.addEventListener('click', toggleHistory);
+
+        // Initialize piano keyboard visualization on page load
+        createPianoKeyboard();
+
+        // Add keyboard shortcut to stop all notes (panic button)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === ' ') {
+                stopAllNotes();
+            }
+        });
+
+        // Auto-connect on page load (optional)
+        // connectMIDI();
+    </script>
+</body>
+</html>
