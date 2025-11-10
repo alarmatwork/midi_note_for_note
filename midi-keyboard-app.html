@@ -445,6 +445,8 @@
 
         .fret:first-child {
             position: relative;
+            border-right: none;
+            width: 10%;        
         }
 
         .fret:first-child::before {
@@ -1465,7 +1467,7 @@
             for (let i = 0; i <= numFrets; i++) {
                 const numDiv = document.createElement('div');
                 numDiv.className = 'fret-number';
-                numDiv.textContent = i;
+                numDiv.textContent = i === 0 ? '' : i; // Skip label for fret 0
                 fretNumbers.appendChild(numDiv);
             }
             guitarFretboardEl.appendChild(fretNumbers);
