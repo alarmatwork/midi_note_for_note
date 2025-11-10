@@ -444,7 +444,18 @@
         }
 
         .fret:first-child {
-            border-left: 4px solid #333;
+            position: relative;
+        }
+
+        .fret:first-child::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #333;
+            transform: translateX(-50%);
         }
 
         .fret-note {
@@ -477,6 +488,8 @@
             font-weight: bold;
             color: #fff;
             font-size: 14px;
+            position: relative;
+            z-index: 100;
         }
 
         .fret-numbers {
