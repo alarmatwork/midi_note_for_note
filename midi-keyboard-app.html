@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIDI Keyboard Input</title>
+    <title>Note Catcher</title>
     <style>
         * {
             margin: 0;
@@ -723,7 +723,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>MIDI Keyboard Input</h1>
+        <h1>Note Catcher</h1>
 
         <div id="status" class="status disconnected">
             No MIDI device connected
@@ -1672,9 +1672,11 @@
             if (pianoContainerEl.style.display === 'none') {
                 pianoContainerEl.style.display = 'block';
                 togglePianoBtn.textContent = 'Hide Piano';
+                localStorage.setItem('pianoVisible', 'true');
             } else {
                 pianoContainerEl.style.display = 'none';
                 togglePianoBtn.textContent = 'Show Piano';
+                localStorage.setItem('pianoVisible', 'false');
             }
         }
 
@@ -1682,9 +1684,11 @@
             if (guitarFretboardEl.style.display === 'none') {
                 guitarFretboardEl.style.display = 'block';
                 toggleGuitarBtn.textContent = 'Hide Guitar';
+                localStorage.setItem('guitarVisible', 'true');
             } else {
                 guitarFretboardEl.style.display = 'none';
                 toggleGuitarBtn.textContent = 'Show Guitar';
+                localStorage.setItem('guitarVisible', 'false');
             }
         }
 
@@ -1692,9 +1696,11 @@
             if (staffContainerEl.style.display === 'none') {
                 staffContainerEl.style.display = 'block';
                 toggleStaffBtn.textContent = 'Hide Staff';
+                localStorage.setItem('staffVisible', 'true');
             } else {
                 staffContainerEl.style.display = 'none';
                 toggleStaffBtn.textContent = 'Show Staff';
+                localStorage.setItem('staffVisible', 'false');
             }
         }
 
@@ -1778,8 +1784,33 @@
             }
         });
 
+        // Restore visibility states from localStorage
+        function restoreVisibilityStates() {
+            // Restore staff visibility
+            const staffVisible = localStorage.getItem('staffVisible');
+            if (staffVisible === 'false') {
+                staffContainerEl.style.display = 'none';
+                toggleStaffBtn.textContent = 'Show Staff';
+            }
+
+            // Restore piano visibility
+            const pianoVisible = localStorage.getItem('pianoVisible');
+            if (pianoVisible === 'false') {
+                pianoContainerEl.style.display = 'none';
+                togglePianoBtn.textContent = 'Show Piano';
+            }
+
+            // Restore guitar visibility
+            const guitarVisible = localStorage.getItem('guitarVisible');
+            if (guitarVisible === 'false') {
+                guitarFretboardEl.style.display = 'none';
+                toggleGuitarBtn.textContent = 'Show Guitar';
+            }
+        }
+
         // Initialize button state on page load
         updateSoundToggleButton();
+        restoreVisibilityStates();
 
         // Make functions globally accessible for onclick handlers
         window.connectInput = connectInput;
@@ -1804,8 +1835,8 @@
             }
         });
 
-        // Auto-connect on page load (optional)
-        // connectMIDI();
+        // Auto-connect on page load
+        connectMIDI();
     </script>
 </body>
 </html>
