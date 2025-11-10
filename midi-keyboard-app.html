@@ -1020,7 +1020,11 @@
 
             // Sixth chords
             'major6': [0, 4, 7, 9],
-            'minor6': [0, 3, 7, 9]
+            'minor6': [0, 3, 7, 9],
+
+            // Power chord (common in guitar)
+            'power': [0, 7],
+            'power-octave': [0, 7, 12]
         };
 
         function normalizeChord(notes) {
@@ -1030,7 +1034,13 @@
             return sorted.map(note => (note - root) % 12).sort((a, b) => a - b);
         }
 
+        function getUniqueIntervals(intervals) {
+            // Remove duplicate intervals (same note in different octaves)
+            return [...new Set(intervals)].sort((a, b) => a - b);
+        }
+
         function matchChord(intervals) {
+            // First try exact match
             for (const [chordName, pattern] of Object.entries(chordPatterns)) {
                 if (intervals.length === pattern.length) {
                     if (intervals.every((interval, idx) => interval === pattern[idx])) {
@@ -1038,17 +1048,55 @@
                     }
                 }
             }
+
+            // Try matching with unique intervals (handles octave duplicates)
+            const uniqueIntervals = getUniqueIntervals(intervals);
+            for (const [chordName, pattern] of Object.entries(chordPatterns)) {
+                if (uniqueIntervals.length === pattern.length) {
+                    if (uniqueIntervals.every((interval, idx) => interval === pattern[idx])) {
+                        return chordName;
+                    }
+                }
+            }
+
+            // Try subset matching (chord contains all pattern notes plus extras)
+            for (const [chordName, pattern] of Object.entries(chordPatterns)) {
+                if (uniqueIntervals.length >= pattern.length) {
+                    if (pattern.every(interval => uniqueIntervals.includes(interval))) {
+                        return chordName;
+                    }
+                }
+            }
+
             return null;
         }
 
         function recognizeChord(midiNotes) {
             if (midiNotes.length < 2) return null;
 
+            const sorted = [...midiNotes].sort((a, b) => a - b);
             const intervals = normalizeChord(midiNotes);
-            const match = matchChord(intervals);
+
+            // Try to match from the lowest note
+            let match = matchChord(intervals);
+            let rootNote = sorted[0];
+
+            // If no match, try inversions (rotate through possible root notes)
+            if (!match && sorted.length >= 3) {
+                for (let i = 0; i < sorted.length; i++) {
+                    const testRoot = sorted[i];
+                    const testIntervals = sorted.map(note => ((note - testRoot) % 12 + 12) % 12).sort((a, b) => a - b);
+                    const testMatch = matchChord(testIntervals);
+
+                    if (testMatch) {
+                        match = testMatch;
+                        rootNote = testRoot;
+                        break;
+                    }
+                }
+            }
 
             if (match) {
-                const rootNote = Math.min(...midiNotes);
                 const rootName = noteNames[rootNote % 12];
                 return { root: rootName, type: match };
             }
@@ -1322,7 +1370,9 @@
                 'add9': 'add9',
                 'minor-add9': 'madd9',
                 'major6': '6',
-                'minor6': 'm6'
+                'minor6': 'm6',
+                'power': '5',
+                'power-octave': '5'
             };
             return nameMap[chordType] || chordType;
         }
