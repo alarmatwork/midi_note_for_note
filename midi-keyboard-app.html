@@ -461,8 +461,8 @@
         }
 
         .fret-note {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: #667eea;
             border: 2px solid #fff;
@@ -470,10 +470,15 @@
             position: relative;
             display: none;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #fff;
         }
 
         .fret-note.active {
-            display: block;
+            display: flex;
         }
 
         .fret-note.root {
@@ -1450,6 +1455,12 @@
                     const noteMarker = document.createElement('div');
                     noteMarker.className = 'fret-note';
                     noteMarker.dataset.midiNote = string.openNote + fret;
+
+                    // Add note name text
+                    const midiNote = string.openNote + fret;
+                    const noteName = midiNoteToName(midiNote);
+                    noteMarker.textContent = noteName.replace(/\d+$/, ''); // Remove octave number
+
                     fretDiv.appendChild(noteMarker);
 
                     fretMarkers.appendChild(fretDiv);
