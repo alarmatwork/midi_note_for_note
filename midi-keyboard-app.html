@@ -73,10 +73,10 @@
         }
 
         .chord-display {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: bold;
             color: #764ba2;
-            min-height: 80px;
+            min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -791,6 +791,7 @@
 
         .button-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
             margin: 10px 0;
@@ -798,6 +799,7 @@
 
         .button-group button {
             margin: 0;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -862,7 +864,7 @@
         <div class="current-note">
             <h2>Chord Detection</h2>
             <div id="chordDisplay" class="chord-display">
-                No chord detected
+                -
             </div>
 
             <div class="instruments-display">
@@ -1499,7 +1501,7 @@
             const notes = Array.from(activeNotes);
 
             if (notes.length === 0) {
-                chordDisplayEl.textContent = 'No chord detected';
+                chordDisplayEl.textContent = '-';
                 updatePianoVisualization();
                 renderStaffNotation([]);
                 return;
