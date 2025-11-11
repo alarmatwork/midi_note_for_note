@@ -801,6 +801,26 @@
             margin: 0;
             flex-shrink: 0;
         }
+
+        /* Responsive styles for smaller screens */
+        @media (max-width: 768px) {
+            .button-group {
+                gap: 8px;
+            }
+
+            .button-group button {
+                font-size: 14px;
+                padding: 10px 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .button-group button {
+                font-size: 13px;
+                padding: 8px 12px;
+                min-width: fit-content;
+            }
+        }
     </style>
 </head>
 <body>
