@@ -110,6 +110,33 @@
             padding: 40px 0 80px 0;
         }
 
+        .staff-clickable-zones {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        .staff-note-zone {
+            position: absolute;
+            width: 100px;
+            height: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: pointer;
+            pointer-events: all;
+            z-index: 5;
+        }
+
+        .staff-note-zone:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 4px;
+        }
+
         .staff {
             position: relative;
             width: 500px;
@@ -202,6 +229,12 @@
             border-radius: 50%;
             transform: translateX(-50%) rotate(-20deg);
             left: 50%;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .note-head:hover {
+            background: #667eea;
         }
 
         .note-stem {
@@ -288,11 +321,20 @@
             border-radius: 0 0 5px 5px;
             z-index: 1;
             transition: all 0.1s;
+            cursor: pointer;
+        }
+
+        .white-key:hover {
+            background: #f0f0f0;
         }
 
         .white-key.active {
             background: linear-gradient(180deg, #667eea 0%, #5568d3 100%);
             transform: translateY(2px);
+        }
+
+        .white-key.active:hover {
+            background: linear-gradient(180deg, #667eea 0%, #5568d3 100%);
         }
 
         .black-key {
@@ -303,9 +345,18 @@
             z-index: 2;
             border-radius: 0 0 3px 3px;
             transition: all 0.1s;
+            cursor: pointer;
+        }
+
+        .black-key:hover {
+            background: #555;
         }
 
         .black-key.active {
+            background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+        }
+
+        .black-key.active:hover {
             background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
         }
 
@@ -441,6 +492,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
+        }
+
+        .fret:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .fret:first-child {
@@ -1348,6 +1404,97 @@
             }
         }
 
+        // Create clickable zones on the staff for interactive note selection
+        function createStaffClickableZones() {
+            const staffWrapper = document.querySelector('.staff-wrapper');
+
+            // Remove existing zones if any
+            const existingZones = staffWrapper.querySelector('.staff-clickable-zones');
+            if (existingZones) {
+                existingZones.remove();
+            }
+
+            const zonesContainer = document.createElement('div');
+            zonesContainer.className = 'staff-clickable-zones';
+
+            // Track positions we've already created zones for
+            const positionMap = new Map();
+
+            // Define clickable note ranges (C3 to C6 covers most common range)
+            // MIDI notes 48 (C3) to 84 (C6)
+            for (let midiNote = 48; midiNote <= 84; midiNote++) {
+                const noteName = midiNoteToName(midiNote);
+                const staffInfo = getStaffPosition(noteName);
+
+                // Calculate the vertical position for the clickable zone
+                let topPercent;
+                if (staffInfo.staff === 'treble') {
+                    topPercent = (staffInfo.position * 12.5) * 0.4;
+                } else {
+                    topPercent = 60 + (staffInfo.position * 12.5) * 0.4;
+                }
+
+                // Create a position key combining staff and position
+                const positionKey = `${staffInfo.staff}-${staffInfo.position}`;
+
+                // If this position already has notes, add this note to the existing zone
+                if (positionMap.has(positionKey)) {
+                    positionMap.get(positionKey).notes.push(midiNote);
+                } else {
+                    // Create new position entry
+                    positionMap.set(positionKey, {
+                        topPercent: topPercent,
+                        notes: [midiNote],
+                        noteName: noteName
+                    });
+                }
+            }
+
+            // Now create zones for each unique position
+            positionMap.forEach((data, key) => {
+                const zone = document.createElement('div');
+                zone.className = 'staff-note-zone';
+                zone.dataset.midiNotes = data.notes.join(',');
+                zone.style.top = `calc(${data.topPercent}% - 7.5px)`; // Center the 15px zone
+
+                // Create tooltip showing all notes at this position
+                const noteNames = data.notes.map(n => midiNoteToName(n)).join(' / ');
+                zone.title = noteNames;
+
+                // Add click event listener - cycles through notes at this position if multiple
+                let currentIndex = 0;
+                zone.addEventListener('click', (e) => {
+                    e.stopPropagation();
+
+                    // If multiple notes share this position, cycle through them
+                    if (data.notes.length > 1) {
+                        // Find first inactive note or cycle to next
+                        let startIndex = currentIndex;
+                        do {
+                            const midiNote = data.notes[currentIndex];
+                            if (!activeNotes.has(midiNote)) {
+                                toggleNote(midiNote);
+                                currentIndex = (currentIndex + 1) % data.notes.length;
+                                return;
+                            }
+                            currentIndex = (currentIndex + 1) % data.notes.length;
+                        } while (currentIndex !== startIndex);
+
+                        // All notes active, toggle the first one off
+                        toggleNote(data.notes[0]);
+                        currentIndex = 0;
+                    } else {
+                        // Single note at this position
+                        toggleNote(data.notes[0]);
+                    }
+                });
+
+                zonesContainer.appendChild(zone);
+            });
+
+            staffWrapper.appendChild(zonesContainer);
+        }
+
         function updateChordDisplay() {
             const notes = Array.from(activeNotes);
 
@@ -1450,16 +1597,22 @@
                     fretDiv.className = 'fret';
                     fretDiv.dataset.string = stringIndex;
                     fretDiv.dataset.fret = fret;
-                    fretDiv.dataset.midiNote = string.openNote + fret;
+                    const midiNote = string.openNote + fret;
+                    fretDiv.dataset.midiNote = midiNote;
 
                     const noteMarker = document.createElement('div');
                     noteMarker.className = 'fret-note';
-                    noteMarker.dataset.midiNote = string.openNote + fret;
+                    noteMarker.dataset.midiNote = midiNote;
 
                     // Add note name text
-                    const midiNote = string.openNote + fret;
                     const noteName = midiNoteToName(midiNote);
                     noteMarker.textContent = noteName.replace(/\d+$/, ''); // Remove octave number
+
+                    // Add click event listener to fret
+                    fretDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleNote(midiNote);
+                    });
 
                     fretDiv.appendChild(noteMarker);
 
@@ -1582,6 +1735,12 @@
                     label.textContent = `${note}${octaveNum}`;
                     key.appendChild(label);
 
+                    // Add click event listener
+                    key.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleNote(midiNote);
+                    });
+
                     octaveDiv.appendChild(key);
                 });
 
@@ -1605,6 +1764,12 @@
                     label.textContent = `${note}${octaveNum}`;
                     key.appendChild(label);
 
+                    // Add click event listener
+                    key.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleNote(midiNote);
+                    });
+
                     octaveDiv.appendChild(key);
                 });
 
@@ -1624,6 +1789,20 @@
                     key.classList.add('active');
                 }
             });
+        }
+
+        // Function to toggle a note on/off when clicked
+        function toggleNote(midiNote) {
+            if (activeNotes.has(midiNote)) {
+                // Note is active, turn it off
+                activeNotes.delete(midiNote);
+                stopNote(midiNote);
+            } else {
+                // Note is inactive, turn it on
+                activeNotes.add(midiNote);
+                playNote(midiNote, 80); // Default velocity of 80
+            }
+            updateChordDisplay();
         }
 
         function updateStatus(message, isConnected) {
@@ -1982,6 +2161,7 @@
         // Initialize piano keyboard and guitar fretboard visualization on page load
         createPianoKeyboard();
         createGuitarFretboard();
+        createStaffClickableZones();
 
         // Add keyboard shortcut to stop all notes (panic button)
         document.addEventListener('keydown', (e) => {
